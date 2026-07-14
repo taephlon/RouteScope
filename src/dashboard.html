@@ -1019,6 +1019,7 @@
                     points.push({
                         hopNum,
                         ip: hop.ip,
+                        hostname: hop.hostname,
                         lat: hop.geo_info.lat,
                         lon: hop.geo_info.lon,
                         country: hop.geo_info.country,
@@ -1050,11 +1051,13 @@
 
                 const m = L.marker([p.lat, p.lon], { icon: customIcon }).addTo(map);
                 
+                const hostnameStr = p.hostname && p.hostname !== p.ip ? p.hostname : 'N/A';
                 const popupContent = `
                     <div style="font-family:'Outfit',sans-serif; color:#1e293b; font-size:0.85rem; line-height:1.4;">
-                        <strong style="color:var(--accent-cyan); font-size:0.95rem;">Hop ${p.hopNum}</strong><br/>
-                        <strong>IP:</strong> ${p.ip}<br/>
-                        <strong>Location:</strong> ${p.city}, ${p.country}<br/>
+                        <strong style="color:var(--accent-cyan); font-size:0.95rem;">Hop ${p.hopNum} - ${p.ip}</strong><br/>
+                        <strong>Country:</strong> ${p.country}<br/>
+                        <strong>City:</strong> ${p.city}<br/>
+                        <strong>Hostname:</strong> ${hostnameStr}<br/>
                         <strong>Network:</strong> ${p.isp}<br/>
                         <strong>Avg RTT:</strong> ${p.avg_rtt.toFixed(2)} ms
                     </div>

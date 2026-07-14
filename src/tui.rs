@@ -429,6 +429,16 @@ fn draw_detail_panel(
     }
     let hop = &state.hops[selected_idx];
 
+    let ip_title = hop
+        .ip
+        .map(|i| i.to_string())
+        .unwrap_or_else(|| "* * *".to_string());
+
+    let host_str = match &hop.hostname {
+        Some(h) if h != &ip_title => h.clone(),
+        _ => "N/A".to_string(),
+    };
+
     // Split into 3 panels: GeoIP | Sparkline | Loss gauge
     let panel_constraints = if show_heatmap {
         vec![
@@ -467,6 +477,10 @@ fn draw_detail_panel(
                 Span::styled(geo.city.clone(), Style::default().fg(Color::LightBlue)),
             ]),
             Line::from(vec![
+                Span::styled("  Hostname: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(host_str, Style::default().fg(Color::LightBlue)),
+            ]),
+            Line::from(vec![
                 Span::styled("  ASN:      ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     geo.asn.clone(),
@@ -503,10 +517,6 @@ fn draw_detail_panel(
         ))]
     };
 
-    let ip_title = hop
-        .ip
-        .map(|i| i.to_string())
-        .unwrap_or_else(|| "* * *".to_string());
     let geo_panel = Paragraph::new(geo_lines).block(
         Block::default()
             .borders(Borders::ALL)

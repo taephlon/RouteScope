@@ -309,10 +309,10 @@ fn print_table_summary(hops: &[HopStats], show_analysis: bool) {
 
     println!();
     println!(
-        "{:<4} {:<20} {:<25} {:<14} {:<10} {:<9} {:<6} RTT Heat",
-        "Hop", "IP Address", "Hostname", "Country/City", "ASN", "Avg RTT", "Loss%"
+        "{:<4} {:<20} {:<25} {:<10} {:<9} {:<6} RTT Heat",
+        "Hop", "IP Address", "Country/City", "ASN", "Avg RTT", "Loss%"
     );
-    println!("{}", "─".repeat(115));
+    println!("{}", "─".repeat(95));
 
     for hop in hops {
         if hop.sent == 0 {
@@ -347,16 +347,19 @@ fn print_table_summary(hops: &[HopStats], show_analysis: bool) {
         let bar = heatmap_bar_simple(hop.avg_rtt(), max_rtt);
 
         println!(
-            "{:<4} {:<20} {:<25} {:<14} {:<10} {:<9} {:.1}%  {}",
+            "{:<4} {:<20} {:<25} {:<10} {:<9} {:.1}%  {}",
             hop.hop_num,
             &ip_str[..ip_str.len().min(20)],
-            &host_str[..host_str.len().min(25)],
-            &country_city[..country_city.len().min(14)],
+            &country_city[..country_city.len().min(25)],
             &asn[..asn.len().min(10)],
             rtt_str,
             hop.loss_pct(),
             bar,
         );
+
+        if !host_str.is_empty() {
+            println!("{:<26}{}", "", &host_str[..host_str.len().min(50)]);
+        }
     }
     println!();
 
