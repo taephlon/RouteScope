@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RouteScope - Live Web Traceroute Dashboard</title>
+    
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- Custom Premium Vanilla CSS -->
+    <style>
+        :root {
+            --bg-primary: #080c14;
+            --bg-secondary: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
+            --accent-yellow: #eab308;
+            --glow-cyan: rgba(6, 182, 212, 0.15);
+            --glow-purple: rgba(139, 92, 246, 0.15);
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition-speed: 0.25s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--glow-cyan);
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.025em;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+
+        .status-dot.connected {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        /* Main Dashboard Layout */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            flex-grow: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Left Panel - Control Card & AS Path */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 0.5rem;
+        }
+
+        /* Input Controls */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px var(--glow-cyan);
+        }
+
+        .form-select-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .btn {
+            flex-grow: 1;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: var(--font-main);
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition-speed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Right Panel - Map, Table, Charts */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Map Container */
+        #map-container {
+            height: 350px;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            background-color: #1a1a1a;
+        }
+
+        /* Grid for Stats and Latency Graph */
+        .sub-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Table Card & Scroll */
+        .table-card {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-main);
+            text-align: left;
+        }
+
+        th {
+            background-color: rgba(30, 41, 59, 0.8);
+            position: sticky;
+            top: 0;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background-color: rgba(51, 65, 85, 0.2);
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        /* Latency Indicator Pills */
+        .latency-pill {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .latency-good {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+
+        .latency-warn {
+            background-color: rgba(234, 179, 8, 0.15);
+            color: var(--accent-yellow);
+        }
+
+        .latency-bad {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+        }
+
+        /* ASN Badges */
+        .asn-badge {
+            background-color: rgba(139, 92, 246, 0.15);
+            color: var(--accent-purple);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        /* Chart card */
+        .chart-container {
+            height: 220px;
+            position: relative;
+        }
+
+        /* Export Options */
+        .export-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-export {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+
+        .btn-export:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-cyan);
+            background-color: rgba(6, 182, 212, 0.05);
+        }
+
+        /* Live ASN flow */
+        .asn-flow-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+
+        .asn-flow-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            animation: fadeIn 0.3s ease-out;
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .asn-flow-arrow {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            margin: -0.25rem 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Animations for pulsing markers */
+        .pulse-marker {
+            animation: pulse-ring 1.5s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            .sub-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">RS</div>
+            <div class="logo-text">RouteScope Dashboard</div>
+        </div>
+        <div class="connection-status">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Disconnected</span>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Left Panel: Control and Provider AS Path -->
+        <div class="left-panel">
+            <div class="card">
+                <div class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-cyan)"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                    Target Configuration
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="target">Target Host or IP</label>
+                    <input type="text" id="target" class="form-input" placeholder="e.g. google.com, 1.1.1.1" value="github.com">
+                </div>
+                <div class="form-select-group">
+                    <div class="form-group">
+                        <label class="form-label" for="method">Probe Method</label>
+                        <select id="method" class="form-input">
+                            <option value="ICMP" selected>ICMP</option>
+                            <option value="UDP">UDP (Unprivileged)</option>
+                            <option value="TCP">TCP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="max-hops">Max Hops</label>
+                        <input type="number" id="max-hops" class="form-input" min="1" max="64" value="30">
+                    </div>
+                </div>
+                <div class="form-select-group">
+                    <div class="form-group">
+                        <label class="form-label" for="count">Probe Count</label>
+                        <input type="number" id="count" class="form-input" min="1" max="500" value="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="timeout">Timeout (ms)</label>
+                        <input type="number" id="timeout" class="form-input" min="100" max="5000" value="1000">
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button id="btn-start" class="btn btn-primary">Start Trace</button>
+                    <button id="btn-stop" class="btn btn-secondary" disabled>Stop</button>
+                </div>
+            </div>
+
+            <div class="card" style="flex-grow: 1;">
+                <div class="card-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-purple)"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    AS Transit Flow
+                </div>
+                <div id="asn-flow" class="asn-flow-list">
+                    <div class="text-secondary" style="font-size: 0.85rem; font-style: italic; text-align: center; margin-top: 2rem;">
+                        Awaiting trace execution to map provider hops...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Map, Hop Table, Latency Charts -->
+        <div class="right-panel">
+            <!-- Map Visualization -->
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+
+            <!-- Stats & Latency Chart -->
+            <div class="sub-grid">
+                <!-- Latency Graph Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-orange)"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Hop Latency Profile (RTT ms)
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Jitter Graph Card -->
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-purple)"><path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16"></path></svg>
+                        Jitter Profile (ms variation)
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="jitterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hop Data Table Card -->
+            <div class="card table-card">
+                <div class="card-title" style="margin-bottom: 0.5rem; justify-content: space-between; display: flex; align-items: center; border-left: none; padding-left: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-left: 3px solid var(--accent-green); padding-left: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-green)"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                        Real-time Route Hop Metrics
+                    </div>
+                    <div class="export-group">
+                        <button id="btn-export-json" class="btn-export">Export JSON</button>
+                        <button id="btn-export-csv" class="btn-export">Export CSV</button>
+                        <button id="btn-export-geojson" class="btn-export">Export GeoJSON</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="setSort('hop')" style="width: 5%; cursor: pointer; user-select: none;">Hop <span id="sort-icon-hop" style="font-size: 0.7rem; color: var(--accent-cyan);">▲</span></th>
+                                <th style="width: 20%">Host / IP</th>
+                                <th style="width: 18%">Location (Country/City)</th>
+                                <th style="width: 22%">Network (ASN/ISP)</th>
+                                <th onclick="setSort('loss')" style="width: 8%; cursor: pointer; user-select: none;">Loss% <span id="sort-icon-loss" style="font-size: 0.7rem; color: var(--text-secondary);">↕</span></th>
+                                <th onclick="setSort('avg_rtt')" style="width: 9%; cursor: pointer; user-select: none;">Avg RTT <span id="sort-icon-avg_rtt" style="font-size: 0.7rem; color: var(--text-secondary);">↕</span></th>
+                                <th onclick="setSort('jitter')" style="width: 9%; cursor: pointer; user-select: none;">Jitter <span id="sort-icon-jitter" style="font-size: 0.7rem; color: var(--text-secondary);">↕</span></th>
+                                <th onclick="setSort('last_rtt')" style="width: 9%; cursor: pointer; user-select: none;">Last RTT <span id="sort-icon-last_rtt" style="font-size: 0.7rem; color: var(--text-secondary);">↕</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="hop-table-body">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 3rem; font-style: italic;">
+                                    Start a trace to display Hop metrics...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- ChartJS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // DOM Elements
+        const targetInput = document.getElementById('target');
+        const methodSelect = document.getElementById('method');
+        const maxHopsInput = document.getElementById('max-hops');
+        const countInput = document.getElementById('count');
+        const timeoutInput = document.getElementById('timeout');
+        const startBtn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        const connectionDot = document.getElementById('status-dot');
+        const connectionText = document.getElementById('status-text');
+        const hopTableBody = document.getElementById('hop-table-body');
+        const asnFlowContainer = document.getElementById('asn-flow');
+        const exportJsonBtn = document.getElementById('btn-export-json');
+        const exportCsvBtn = document.getElementById('btn-export-csv');
+        const exportGeojsonBtn = document.getElementById('btn-export-geojson');
+
+        // State variables
+        let socket = null;
+        let map = null;
+        let mapRouteLine = null;
+        let mapMarkers = [];
+        let latencyChart = null;
+        let jitterChart = null;
+        let hopsData = {}; // keyed by hop number
+        let activeTrace = false;
+        let sortBy = 'hop';
+        let sortAsc = true;
+
+        // Initialize Web Map
+        function initMap() {
+            // Dark map tiles (CartoDB Dark Matter is perfect for premium aesthetic)
+            map = L.map('map', {
+                center: [20, 0],
+                zoom: 2,
+                zoomControl: true,
+                attributionControl: false
+            });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        // Initialize Latency & Jitter Charts
+        function initCharts() {
+            const ctxLatency = document.getElementById('latencyChart').getContext('2d');
+            latencyChart = new Chart(ctxLatency, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Average RTT (ms)',
+                        data: [],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#06b6d4'
+                    }, {
+                        label: 'Last RTT (ms)',
+                        data: [],
+                        borderColor: '#f97316',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        pointRadius: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Outfit' } },
+                            suggestedMin: 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: { color: '#f8fafc', font: { family: 'Outfit', size: 10 } }
+                        }
+                    }
+                }
+            });
+
+            const ctxJitter = document.getElementById('jitterChart').getContext('2d');
+            jitterChart = new Chart(ctxJitter, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Jitter (ms)',
+                        data: [],
+                        backgroundColor: 'rgba(139, 92, 246, 0.4)',
+                        borderColor: '#8b5cf6',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Outfit' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Outfit' } },
+                            suggestedMin: 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Establish WebSocket Connection
+        function connectWebSocket() {
+            const loc = window.location;
+            let wsUri = "";
+            if (loc.protocol === "https:") {
+                wsUri = "wss:";
+            } else {
+                wsUri = "ws:";
+            }
+            wsUri += "//" + loc.host + "/api/trace/ws";
+
+            console.log("WebSocket: Attempting connection to", wsUri);
+            socket = new WebSocket(wsUri);
+
+            socket.onopen = () => {
+                console.log("WebSocket: Connected successfully");
+                connectionDot.classList.add('connected');
+                connectionText.textContent = 'Connected to Backend';
+                startBtn.disabled = activeTrace;
+            };
+
+            socket.onclose = (event) => {
+                console.warn("WebSocket: Connection closed. Code:", event.code, "Reason:", event.reason, "WasClean:", event.wasClean);
+                connectionDot.classList.remove('connected');
+                connectionText.textContent = 'Disconnected (Target: ' + wsUri + ')';
+                startBtn.disabled = true;
+                stopBtn.disabled = true;
+                activeTrace = false;
+                // Auto reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket: Error occurred: ", error);
+            };
+
+            socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === "probe") {
+                    updateHopData(msg.data);
+                } else if (msg.type === "complete") {
+                    handleTraceFinished();
+                } else if (msg.type === "error") {
+                    alert("Error running trace: " + msg.message);
+                    handleTraceFinished();
+                }
+            };
+        }
+
+        function startTrace() {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                alert("WebSocket is not connected!");
+                return;
+            }
+
+            activeTrace = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            // Clear current state
+            hopsData = {};
+            hopTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--accent-cyan); padding: 3rem; font-style: italic; font-weight: 500;">Resolving host and initializing packets...</td></tr>`;
+            asnFlowContainer.innerHTML = '';
+            
+            // Clear Map
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+            if (mapRouteLine) {
+                map.removeLayer(mapRouteLine);
+                mapRouteLine = null;
+            }
+            map.setView([20, 0], 2);
+
+            // Send trigger config to WebSocket
+            const payload = {
+                host: targetInput.value.trim(),
+                method: methodSelect.value,
+                max_hops: parseInt(maxHopsInput.value),
+                count: parseInt(countInput.value),
+                timeout_ms: parseInt(timeoutInput.value)
+            };
+            socket.send(JSON.stringify(payload));
+        }
+
+        function stopTrace() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: "stop" }));
+            }
+            handleTraceFinished();
+        }
+
+        function handleTraceFinished() {
+            activeTrace = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        function updateHopData(hop) {
+            // Remove the initial spinner row if it's there
+            if (Object.keys(hopsData).length === 0) {
+                hopTableBody.innerHTML = '';
+            }
+
+            // Save or update hop statistics
+            hopsData[hop.hop_num] = hop;
+
+            // Render table
+            renderTable();
+
+            // Render charts
+            renderCharts();
+
+            // Render map
+            renderMap();
+
+            // Render ASN flow
+            renderAsnFlow();
+        }
+
+        function renderTable() {
+            const sortedHops = Object.keys(hopsData).map(Number);
+            
+            sortedHops.sort((a, b) => {
+                const hopA = hopsData[a];
+                const hopB = hopsData[b];
+                
+                let valA = null;
+                let valB = null;
+                
+                if (sortBy === 'hop') {
+                    valA = hopA.hop_num;
+                    valB = hopB.hop_num;
+                } else if (sortBy === 'loss') {
+                    valA = hopA.loss_pct;
+                    valB = hopB.loss_pct;
+                } else if (sortBy === 'avg_rtt') {
+                    valA = hopA.recv_count > 0 ? hopA.avg_rtt_ms : (sortAsc ? 999999 : -999999);
+                    valB = hopB.recv_count > 0 ? hopB.avg_rtt_ms : (sortAsc ? 999999 : -999999);
+                } else if (sortBy === 'jitter') {
+                    valA = hopA.recv_count > 1 ? hopA.jitter_ms : (sortAsc ? 999999 : -999999);
+                    valB = hopB.recv_count > 1 ? hopB.jitter_ms : (sortAsc ? 999999 : -999999);
+                } else if (sortBy === 'last_rtt') {
+                    valA = hopA.last_rtt_ms !== null && hopA.last_rtt_ms !== undefined ? hopA.last_rtt_ms : (sortAsc ? 999999 : -999999);
+                    valB = hopB.last_rtt_ms !== null && hopB.last_rtt_ms !== undefined ? hopB.last_rtt_ms : (sortAsc ? 999999 : -999999);
+                }
+                
+                if (valA === valB) return 0;
+                return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+            });
+
+            let html = '';
+            sortedHops.forEach(hopNum => {
+                const hop = hopsData[hopNum];
+                const ipStr = hop.ip || '* * *';
+                const hostnameStr = hop.hostname && hop.hostname !== hop.ip ? hop.hostname : '';
+                
+                let locationStr = 'Unknown';
+                let netStr = 'N/A';
+                
+                if (hop.geo_info) {
+                    const geo = hop.geo_info;
+                    const city = geo.city && geo.city !== 'Unknown' ? geo.city : '';
+                    const country = geo.country && geo.country !== 'Unknown' ? geo.country : '';
+                    if (city && country) {
+                        locationStr = `${country} (${city})`;
+                    } else if (country) {
+                        locationStr = country;
+                    }
+
+                    const asn = geo.asn && geo.asn !== 'N/A' ? geo.asn : '';
+                    const isp = geo.isp && geo.isp !== 'Unknown' ? geo.isp : '';
+                    if (asn && isp) {
+                        netStr = `<span class="asn-badge">${asn}</span> ${isp}`;
+                    } else if (asn) {
+                        netStr = `<span class="asn-badge">${asn}</span>`;
+                    } else if (isp) {
+                        netStr = isp;
+                    }
+                }
+
+                // Latency color styling
+                const avgRtt = hop.avg_rtt_ms;
+                let latClass = 'latency-good';
+                if (avgRtt > 150) {
+                    latClass = 'latency-bad';
+                } else if (avgRtt > 75) {
+                    latClass = 'latency-warn';
+                }
+
+                const lastRttStr = hop.last_rtt_ms !== null && hop.last_rtt_ms !== undefined ? `${hop.last_rtt_ms.toFixed(2)} ms` : '*';
+                const avgRttStr = hop.recv_count > 0 ? `${avgRtt.toFixed(2)} ms` : '*';
+                const jitterStr = hop.recv_count > 1 ? `${hop.jitter_ms.toFixed(2)} ms` : '*';
+                const lossPctStr = `${hop.loss_pct.toFixed(0)}%`;
+
+                const lossStyle = hop.loss_pct > 20 ? 'color: var(--accent-red); font-weight: 700;' : 
+                                  hop.loss_pct > 0 ? 'color: var(--accent-orange); font-weight: 500;' : '';
+
+                html += `
+                    <tr>
+                        <td class="mono" style="font-weight:600; color:var(--accent-cyan);">${hopNum}</td>
+                        <td>
+                            <div style="font-weight:500;">${ipStr}</div>
+                            <div style="font-size:0.75rem; color:var(--text-secondary);">${hostnameStr}</div>
+                        </td>
+                        <td>${locationStr}</td>
+                        <td>${netStr}</td>
+                        <td class="mono" style="${lossStyle}">${lossPctStr}</td>
+                        <td class="mono"><span class="latency-pill ${latClass}">${avgRttStr}</span></td>
+                        <td class="mono">${jitterStr}</td>
+                        <td class="mono">${lastRttStr}</td>
+                    </tr>
+                `;
+            });
+
+            hopTableBody.innerHTML = html;
+        }
+
+        function setSort(field) {
+            if (sortBy === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortBy = field;
+                sortAsc = true;
+            }
+            
+            // Update sort icons in UI
+            ['hop', 'loss', 'avg_rtt', 'jitter', 'last_rtt'].forEach(f => {
+                const icon = document.getElementById(`sort-icon-${f}`);
+                if (icon) {
+                    if (sortBy === f) {
+                        icon.textContent = sortAsc ? '▲' : '▼';
+                        icon.style.color = 'var(--accent-cyan)';
+                    } else {
+                        icon.textContent = '↕';
+                        icon.style.color = 'var(--text-secondary)';
+                    }
+                }
+            });
+            
+            renderTable();
+        }
+
+        function renderCharts() {
+            const sortedHops = Object.keys(hopsData).map(Number).sort((a, b) => a - b);
+            
+            const labels = sortedHops.map(h => `Hop ${h}`);
+            const avgRtts = sortedHops.map(h => hopsData[h].recv_count > 0 ? hopsData[h].avg_rtt_ms : 0);
+            const lastRtts = sortedHops.map(h => hopsData[h].last_rtt_ms || 0);
+            const jitters = sortedHops.map(h => hopsData[h].recv_count > 1 ? hopsData[h].jitter_ms : 0);
+
+            // Update Latency Chart
+            latencyChart.data.labels = labels;
+            latencyChart.data.datasets[0].data = avgRtts;
+            latencyChart.data.datasets[1].data = lastRtts;
+            latencyChart.update('none');
+
+            // Update Jitter Chart
+            jitterChart.data.labels = labels;
+            jitterChart.data.datasets[0].data = jitters;
+            jitterChart.update('none');
+        }
+
+        function renderMap() {
+            const sortedHops = Object.keys(hopsData).map(Number).sort((a, b) => a - b);
+            
+            // Collect points with coordinates
+            const points = [];
+            sortedHops.forEach(hopNum => {
+                const hop = hopsData[hopNum];
+                if (hop.geo_info && (hop.geo_info.lat !== 0.0 || hop.geo_info.lon !== 0.0)) {
+                    points.push({
+                        hopNum,
+                        ip: hop.ip,
+                        lat: hop.geo_info.lat,
+                        lon: hop.geo_info.lon,
+                        country: hop.geo_info.country,
+                        city: hop.geo_info.city,
+                        isp: hop.geo_info.isp,
+                        avg_rtt: hop.avg_rtt_ms
+                    });
+                }
+            });
+
+            // Re-render markers
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+
+            points.forEach((p, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === points.length - 1;
+                
+                let markerColor = '#8b5cf6'; // intermediate hops are violet
+                if (isFirst) markerColor = '#10b981'; // source is emerald
+                if (isLast) markerColor = '#ef4444'; // target is rose
+
+                // Create custom divicon for pulsing effect
+                const customIcon = L.divIcon({
+                    className: 'custom-leaflet-icon',
+                    html: `<div style="background-color:${markerColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px ${markerColor};" class="pulse-marker"></div>`,
+                    iconSize: [12, 12]
+                });
+
+                const m = L.marker([p.lat, p.lon], { icon: customIcon }).addTo(map);
+                
+                const popupContent = `
+                    <div style="font-family:'Outfit',sans-serif; color:#1e293b; font-size:0.85rem; line-height:1.4;">
+                        <strong style="color:var(--accent-cyan); font-size:0.95rem;">Hop ${p.hopNum}</strong><br/>
+                        <strong>IP:</strong> ${p.ip}<br/>
+                        <strong>Location:</strong> ${p.city}, ${p.country}<br/>
+                        <strong>Network:</strong> ${p.isp}<br/>
+                        <strong>Avg RTT:</strong> ${p.avg_rtt.toFixed(2)} ms
+                    </div>
+                `;
+                m.bindPopup(popupContent);
+                mapMarkers.push(m);
+            });
+
+            // Draw line connecting them
+            if (mapRouteLine) {
+                map.removeLayer(mapRouteLine);
+            }
+
+            if (points.length >= 2) {
+                const latlngs = points.map(p => [p.lat, p.lon]);
+                mapRouteLine = L.polyline(latlngs, {
+                    color: '#06b6d4',
+                    weight: 3,
+                    opacity: 0.7,
+                    dashArray: '5, 10'
+                }).addTo(map);
+
+                // Auto-fit bounds if we just added coordinates
+                map.fitBounds(mapRouteLine.getBounds(), { padding: [30, 30] });
+            }
+        }
+
+        function renderAsnFlow() {
+            const sortedHops = Object.keys(hopsData).map(Number).sort((a, b) => a - b);
+            
+            // Build unique ASN list
+            const asnChain = [];
+            let lastAsn = null;
+
+            sortedHops.forEach(hopNum => {
+                const hop = hopsData[hopNum];
+                if (hop.geo_info && hop.geo_info.asn && hop.geo_info.asn !== 'N/A' && hop.geo_info.asn !== 'Unknown') {
+                    if (hop.geo_info.asn !== lastAsn) {
+                        asnChain.push({
+                            asn: hop.geo_info.asn,
+                            isp: hop.geo_info.isp,
+                            country: hop.geo_info.country
+                        });
+                        lastAsn = hop.geo_info.asn;
+                    }
+                }
+            });
+
+            if (asnChain.length === 0) {
+                asnFlowContainer.innerHTML = `
+                    <div style="font-size:0.85rem; font-style:italic; text-align:center; margin-top:2rem; color:var(--text-secondary);">
+                        No AS details identified in current hops.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            asnChain.forEach((item, idx) => {
+                html += `
+                    <div class="asn-flow-item">
+                        <div>
+                            <strong style="color:var(--text-primary); font-size:0.85rem;">${item.asn}</strong>
+                            <div style="font-size:0.7rem; color:var(--text-secondary);">${item.isp}</div>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--accent-purple); font-weight:600;">
+                            ${item.country}
+                        </div>
+                    </div>
+                `;
+                if (idx < asnChain.length - 1) {
+                    html += `
+                        <div class="asn-flow-arrow">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                        </div>
+                    `;
+                }
+            });
+
+            asnFlowContainer.innerHTML = html;
+        }
+
+        // Export data
+        function getDownloadData() {
+            const sortedHops = Object.keys(hopsData).map(Number).sort((a, b) => a - b);
+            return sortedHops.map(h => hopsData[h]);
+        }
+
+        exportJsonBtn.addEventListener('click', () => {
+            const data = getDownloadData();
+            if (data.length === 0) return alert("No trace data to export");
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `routescope_trace_${targetInput.value.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+            a.click();
+        });
+
+        exportCsvBtn.addEventListener('click', () => {
+            const data = getDownloadData();
+            if (data.length === 0) return alert("No trace data to export");
+            
+            let csvContent = "Hop,IP,Hostname,Country,City,ASN,ISP,Sent,Recv,Loss%,AvgRTT_ms,Jitter_ms,LastRTT_ms\n";
+            data.forEach(h => {
+                const ip = h.ip || '';
+                const host = h.hostname || '';
+                const country = h.geo_info ? h.geo_info.country : '';
+                const city = h.geo_info ? h.geo_info.city : '';
+                const asn = h.geo_info ? h.geo_info.asn : '';
+                const isp = h.geo_info ? h.geo_info.isp : '';
+                
+                csvContent += `${h.hop_num},"${ip}","${host}","${country}","${city}","${asn}","${isp}",${h.sent_count},${h.recv_count},${h.loss_pct.toFixed(0)},${h.avg_rtt_ms.toFixed(2)},${h.jitter_ms.toFixed(2)},${h.last_rtt_ms ? h.last_rtt_ms.toFixed(2) : ''}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `routescope_trace_${targetInput.value.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+            a.click();
+        });
+
+        exportGeojsonBtn.addEventListener('click', () => {
+            const data = getDownloadData();
+            if (data.length === 0) return alert("No trace data to export");
+
+            const features = [];
+            const coordinates = [];
+
+            data.forEach(h => {
+                if (h.geo_info && (h.geo_info.lat !== 0.0 || h.geo_info.lon !== 0.0)) {
+                    coordinates.push([h.geo_info.lon, h.geo_info.lat]);
+                    features.push({
+                        type: "Feature",
+                        geometry: {
+                            type: "Point",
+                            coordinates: [h.geo_info.lon, h.geo_info.lat]
+                        },
+                        properties: {
+                            hop: h.hop_num,
+                            ip: h.ip,
+                            hostname: h.hostname,
+                            country: h.geo_info.country,
+                            city: h.geo_info.city,
+                            asn: h.geo_info.asn,
+                            isp: h.geo_info.isp,
+                            avg_rtt_ms: h.avg_rtt_ms,
+                            loss_pct: h.loss_pct
+                        }
+                    });
+                }
+            });
+
+            if (coordinates.length >= 2) {
+                features.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: coordinates
+                    },
+                    properties: {
+                        name: "Trace Route Path"
+                    }
+                });
+            }
+
+            const geojson = {
+                type: "FeatureCollection",
+                features: features
+            };
+
+            const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `routescope_trace_${targetInput.value.replace(/[^a-zA-Z0-9]/g, '_')}.geojson`;
+            a.click();
+        });
+
+        // Event Listeners
+        startBtn.addEventListener('click', startTrace);
+        stopBtn.addEventListener('click', stopTrace);
+        
+        targetInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startTrace();
+        });
+
+        // Init Calls
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            initCharts();
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>
