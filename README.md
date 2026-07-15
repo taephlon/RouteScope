@@ -1,30 +1,30 @@
-# RouteScope 🌐🔭
+# RouteScope
 
 **RouteScope** is a modern, high-performance network diagnostics tool written in Rust — combining the capabilities of **MTR**, **GeoIP lookups**, **AS Path visualization**, **real-time latency profiling**, and a beautiful **Web Dashboard** with an interactive map.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---|---|
-| 🔀 **Multi-Protocol** | ICMP, UDP (default, unprivileged), and TCP traceroute |
-| 📡 **MTR-Style Continuous Mode** | Live TUI that continuously probes all hops |
-| 🔓 **Unprivileged Mode** | Runs without `sudo` using Linux `MSG_ERRQUEUE` + `IP_RECVERR` |
-| 🗺 **GeoIP & ASN** | Country, City, Lat/Lon, ASN, ISP, Timezone per hop |
-| 💾 **Smart Cache** | Disk-based GeoIP cache (`.routescope_geoip_cache.json`) for instant repeats |
-| 📈 **Rich Statistics** | RTT (last/avg/min/max), Jitter, Packet Loss % per hop |
-| 🌡 **Latency Heatmap** | ASCII block heatmap showing where latency spikes |
-| 📉 **Latency Chart** | ASCII scatter plot of per-hop RTT |
-| 🔄 **Reverse DNS** | Hostname resolution for every responding hop |
-| 📤 **Export** | JSON, CSV, GeoJSON (compatible with QGIS, Google Earth, Leaflet, MapLibre) |
-| 🖥 **Interactive TUI** | `ratatui`-based live table with sparkline, geo panel, loss gauge |
-| 🌐 **Web Dashboard** | Embedded SPA with Leaflet map, Chart.js graphs, real-time WebSocket updates |
-| 🌍 **IPv4 & IPv6** | Full dual-stack support |
+| **Multi-Protocol** | ICMP, UDP (default, unprivileged), and TCP traceroute |
+| **MTR-Style Continuous Mode** | Live TUI that continuously probes all hops |
+| **Unprivileged Mode** | Runs without `sudo` using Linux `MSG_ERRQUEUE` + `IP_RECVERR` |
+| **GeoIP & ASN** | Country, City, Lat/Lon, ASN, ISP, Timezone per hop |
+| **Smart Cache** | Disk-based GeoIP cache (`.routescope_geoip_cache.json`) for instant repeats |
+| **Rich Statistics** | RTT (last/avg/min/max), Jitter, Packet Loss % per hop |
+| **Latency Heatmap** | ASCII block heatmap showing where latency spikes |
+| **Latency Chart** | ASCII scatter plot of per-hop RTT |
+| **Reverse DNS** | Hostname resolution for every responding hop |
+| **Export** | JSON, CSV, GeoJSON (compatible with QGIS, Google Earth, Leaflet, MapLibre) |
+| **Interactive TUI** | `ratatui`-based live table with sparkline, geo panel, loss gauge |
+| **Web Dashboard** | Embedded SPA with Leaflet map, Chart.js graphs, real-time WebSocket updates |
+| **IPv4 & IPv6** | Full dual-stack support |
 
 ---
 
-## 📁 Project Layout
+## Project Layout
 
 ```
 routescope/
@@ -48,7 +48,7 @@ routescope/
 
 ---
 
-## 🚀 Installation & Building
+## Installation & Building
 
 To compile and install RouteScope on any Linux distribution, you can use either the automated installation script, the Makefile, or standard Cargo.
 
@@ -85,7 +85,7 @@ sudo setcap cap_net_raw+ep target/release/routescope
 
 ---
 
-## 📖 Usage
+## Usage
 
 Once installed, you can run the `routescope` command from anywhere. If you did not install it, you can run the compiled binary directly from the build directory: `./target/release/routescope`.
 
@@ -147,7 +147,7 @@ Then open **http://localhost:8080** in your browser.
 
 ---
 
-## 🌍 GeoIP Data Sources
+## GeoIP Data Sources
 
 RouteScope uses a two-tier approach:
 
@@ -156,7 +156,7 @@ RouteScope uses a two-tier approach:
 
 ---
 
-## 🎨 Web Dashboard Features
+## Web Dashboard Features
 
 - **Dark glassmorphism** UI with `Outfit` + `JetBrains Mono` typography
 - **Interactive Leaflet map** with pulsing markers for each hop
@@ -168,7 +168,7 @@ RouteScope uses a two-tier approach:
 
 ---
 
-## 📊 Example Output (CLI)
+## Example Output (CLI)
 
 ```
 $ routescope github.com --map
@@ -203,7 +203,7 @@ Hop  IP Address           Hostname                  Country/City   ASN        Av
 
 ---
 
-## 🔧 Advanced & CLI Examples
+## Advanced & CLI Examples
 
 Once installed, you can use these flags in any order:
 
@@ -237,7 +237,7 @@ routescope google.com -a
 
 ---
 
-## 💡 Troubleshooting & Tips
+## Troubleshooting & Tips
 
 ### 1. Rootless ICMP (Ping) setup
 If you do not want to use `setcap` or `sudo` to run ICMP traces, you can configure your Linux system's group ranges to allow user-space ping sockets.
@@ -270,7 +270,7 @@ If the **Web Dashboard** loads in your browser but the WebSocket connection stat
 
 ---
 
-## 🧑‍💻 Developer Community Guide
+## Developer Community Guide
 
 Contributions from the developer community are highly welcome! Here is an overview of how the codebase is structured and how you can work on it.
 
